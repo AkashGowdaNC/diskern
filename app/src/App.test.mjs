@@ -25,11 +25,11 @@ test("the scan panel keeps the same props contract", () => {
   );
 });
 
-test("the scan panel carries a decorative shield mark", () => {
+test("the scan panel carries the shared brand mark", () => {
   assert.match(
     scan,
-    /className="scan-mark"[^>]*aria-hidden="true"/s,
-    "the mark is decorative — the status text carries the meaning"
+    /<BrandMark\s+className="scan-mark"\s*\/>/,
+    "the shield glyph lives in BrandMark — one source, reused everywhere"
   );
 });
 
@@ -77,4 +77,8 @@ test("preview findings are not actionable until the final report arrives", () =>
   assert.match(jsx, /actionsDisabled=\{showingPreview\}/);
   assert.match(jsx, /Preview only/);
   assert.match(jsx, /Final safety checks and actions unlock/);
+});
+
+test("App imports the shared BrandMark component", () => {
+  assert.match(jsx, /import BrandMark from "\.\/BrandMark\.jsx";/);
 });
