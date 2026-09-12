@@ -82,3 +82,20 @@ test("preview findings are not actionable until the final report arrives", () =>
 test("App imports the shared BrandMark component", () => {
   assert.match(jsx, /import BrandMark from "\.\/BrandMark\.jsx";/);
 });
+
+// The header lives inside App's JSX, not in the ScanningIndicator slice.
+const header = jsx.slice(jsx.indexOf("<header>"), jsx.indexOf("</header>"));
+assert.ok(header.length > 0, "App.jsx must render a <header>");
+
+test("the header pairs the brand mark with the wordmark", () => {
+  assert.match(
+    header,
+    /<BrandMark\s+className="header-mark"\s*\/>/,
+    "the header reuses the same mark component, not a copy of the SVG"
+  );
+  assert.match(header, /<h1>Diskern<\/h1>/);
+  assert.ok(
+    header.indexOf("<BrandMark") < header.indexOf("<h1>"),
+    "the mark leads the wordmark in the brand row"
+  );
+});
