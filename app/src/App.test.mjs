@@ -146,6 +146,8 @@ test("the app subscribes to the shared update status store", () => {
     "the checker runs outside React — App must read its status from the store"
   );
   assert.match(app, /<UpdateStatus\s+status=\{updateStatus\}/s);
+});
+
 // The CappedList helper — from its declaration to the CategorySection
 // that follows it — is what keeps big reports from flooding the DOM.
 const cappedList = jsx.slice(
