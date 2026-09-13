@@ -41,6 +41,23 @@ class ChangelogTests(unittest.TestCase):
         (self.root / "CHANGELOG.md").write_text(first)
         self.assertEqual(build(self.root, True), first)
 
+    def test_reused_fragment_name_cannot_discard_different_release_notes(self):
+        self.fragment("1-a.fixed.md", "- Original note\n")
+        collected = build(self.root, True)
+        self.fragment("1-a.fixed.md", "- A different change with a reused name\n")
+        with self.assertRaisesRegex(ValueError, "already collected"):
+            build(self.root, True)
+        self.assertEqual((self.root / "CHANGELOG.md").read_text(), collected)
+        self.assertIn("different change", (self.root / "changelog.d/1-a.fixed.md").read_text())
+
+    def test_edited_fragment_after_interruption_is_preserved_for_review(self):
+        self.fragment("1-a.fixed.md", "- Original note\n")
+        (self.root / "CHANGELOG.md").write_text(build(self.root))
+        self.fragment("1-a.fixed.md", "- Revised note\n")
+        with self.assertRaises(ValueError):
+            build(self.root, True)
+        self.assertTrue((self.root / "changelog.d/1-a.fixed.md").exists())
+
     def test_invalid_fragment_does_not_mutate_history(self):
         for name, body in [("oops.md", "- Text"), ("1-a.fixed.md", ""),
                            ("1-a.fixed.md", "- Text\n<<<<<<< conflict"),

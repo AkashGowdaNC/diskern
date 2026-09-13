@@ -21,7 +21,11 @@ python3 scripts/changelog.py build --write # release preparation only
 The release command adds fragments to `Unreleased`, preserves existing
 entries and released history, and consumes the collected fragment files.
 Commit the generated changelog and deletions together in the release PR.
-Generated HTML markers prevent duplicate entries if cleanup is interrupted.
+Generated HTML markers include a content digest to prevent duplicate entries
+if cleanup is interrupted. Reusing a collected filename with different text
+fails validation and preserves the fragment for review; choose a new topic
+name for a new change. An edited fragment from an interrupted collection must
+be reconciled with its generated entry before collecting again.
 Keep those markers when moving Unreleased into a dated release section.
 
 See [the release procedure](../docs/RELEASING.md).

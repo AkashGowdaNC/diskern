@@ -1,6 +1,7 @@
 """Validate change fragments and collect them into Unreleased for a release PR."""
 
 import argparse
+import hashlib
 from pathlib import Path
 import re
 import sys
@@ -46,7 +47,14 @@ def render(changelog, fragments):
     for category in CATEGORIES:
         entries = []
         for path, kind, body in fragments:
-            token = f"<!-- fragment: {path.name} -->"
+            digest = hashlib.sha256(body.encode("utf-8")).hexdigest()
+            prefix = f"<!-- fragment: {path.name} "
+            token = f"{prefix}sha256={digest} -->"
+            if prefix in changelog and token not in changelog:
+                raise ValueError(
+                    f"{path.name}: already collected with different or unknown content; "
+                    "use a new fragment name or review the interrupted collection"
+                )
             if kind == category and token not in changelog:
                 entries.append(token + "\n" + body)
         if not entries:
@@ -80,7 +88,9 @@ def build(root, write=False):
             temporary.replace(changelog)
         finally:
             temporary.unlink(missing_ok=True)
-        for path, _, _ in fragments:
+        for path, _, body in fragments:
+            if path.read_text(encoding="utf-8").strip() != body:
+                raise ValueError(f"{path.name}: changed during collection; leaving it for review")
             path.unlink()
     return result
 
