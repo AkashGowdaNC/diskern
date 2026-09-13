@@ -19,6 +19,9 @@ import {
 } from "./updateCoordinator.js";
 import { humanBytes } from "./format.js";
 import BrandMark from "./BrandMark.jsx";
+import CappedList from "./components/CappedList.jsx";
+import ScanningIndicator from "./components/ScanningIndicator.jsx";
+import UpdateStatus from "./components/UpdateStatus.jsx";
 
 const CATEGORY_LABEL = {
   browser_cache: "Browser cache",
@@ -152,30 +155,6 @@ function FindingRow({ f, quarantineDir, onQuarantined, actionsDisabled = false }
 
       {rowError && <span className="row-error">{rowError}</span>}
     </li>
-  );
-}
-
-/**
- * A list that mounts only its first `cap` items, with a quiet toggle to
- * reveal the rest and cap it again. Keeping the expanded flag inside the
- * helper means every list caps itself independently — each category
- * block, the duplicate panel and each set's path list get their own —
- * and a fresh scan starts capped again because the sections remount.
- * Short lists render exactly as before: same markup, no button.
- */
-function CappedList({ tag: Tag = "ul", className, items, cap, renderItem }) {
-  const [expanded, setExpanded] = useState(false);
-  const visible = expanded ? items : items.slice(0, cap);
-  const hidden = items.length - cap;
-  return (
-    <>
-      <Tag className={className}>{visible.map(renderItem)}</Tag>
-      {hidden > 0 && (
-        <button className="list-toggle" onClick={() => setExpanded((v) => !v)}>
-          {expanded ? "Show less" : `Show ${hidden} more`}
-        </button>
-      )}
-    </>
   );
 }
 
@@ -404,114 +383,6 @@ function QuarantineSection({ quarantineDir, refreshKey, onRestored }) {
         </div>
       </div>
     </section>
-  );
-}
-
-/**
- * Live "is this actually working" feedback while a scan runs, dressed as
- * a small branded panel rather than a bare bar.
- *
- * There's no true percentage to show — the total file count on disk isn't
- * known until the walk finishes, so faking a 0-100% number would just be
- * lying with more decimals. Instead: a real, continuously-updating count
- * of files found so far (proof of life) plus an animated indeterminate
- * bar (motion reads as "working," not "frozen").
- *
- * The panel around it carries the reassurance the scan deserves: a
- * shield mark (the walk is read-only, so the icon says "safe", not
- * "fast") and copy that says plainly nothing is being changed. When the
- * user cancels, the panel doesn't snap away — `cancelling` freezes the
- * motion and dims the panel while the walk finishes the entry it's on.
- */
-function ScanningIndicator({ filesSeen, bytesSeen, phase, onCancel, cancelling }) {
-  return (
-    <div className={`scan-progress${cancelling ? " cancelling" : ""}`}>
-      <div className="scan-head">
-        {/* Decorative — the status text already says the scan is safe. */}
-        <BrandMark className="scan-mark" />
-        <div className="scan-copy">
-          <p className="scan-status">
-            {cancelling
-              ? "Stopping the scan… nothing has been changed"
-              : "Scanning safely… nothing is being changed"}
-          </p>
-          <p className="progress-phase">{phase || "Walking files"}</p>
-          <p className="progress-count">
-            {filesSeen.toLocaleString()} files found
-            {bytesSeen > 0 && <> · {humanBytes(bytesSeen)} so far</>}
-          </p>
-        </div>
-      </div>
-      <div className="progress-track">
-        <div className="progress-fill-indeterminate" />
-      </div>
-      {/* The walk checks the cancel flag per entry, so stopping is quick but
-          not instant — say "Stopping…" rather than pretending it's done. */}
-      <button className="cancel-btn" onClick={onCancel} disabled={cancelling}>
-        {cancelling ? "Stopping…" : "Cancel scan"}
-      </button>
-    </div>
-  );
-}
-
-/**
- * Copy for each phase the update checker publishes. The title says what is
- * happening; the detail — when there is one — says which version it is
- * happening to, or what comes next. Tone follows the scan panel: calm and
- * plain, never alarming.
- */
-const UPDATE_PHASES = {
-  checking: { title: "Checking for updates…" },
-  downloading: {
-    title: "Downloading update…",
-    detail: (s) => s.version && `Diskern ${s.version}`,
-  },
-  deferred: {
-    title: "Will update after the current operation finishes",
-    detail: (s) => s.version && `Diskern ${s.version} is downloaded`,
-  },
-  ready: {
-    title: "Update ready to install",
-    detail: (s) => s.version && `Diskern ${s.version}`,
-  },
-  installing: {
-    title: "Installing update…",
-    detail: "Diskern will restart when it finishes",
-  },
-  failed: { title: "Update failed — you can keep using Diskern" },
-};
-
-/**
- * A small corner toast for the auto-updater. Checking, downloading, waiting
- * on running work, installing and failing each get a quiet line, so the
- * "Restart to update?" dialog never appears out of nowhere and a deferred
- * or failed update never reads as a frozen app.
- *
- * It is status-only, in a fixed corner, so nothing it shows can block or
- * shift the app — the install decision itself still belongs to the confirm
- * dialog. Only a failed update lingers, and it gets a dismiss button;
- * every other phase clears itself when the checker moves on.
- */
-function UpdateStatus({ status, onDismiss }) {
-  if (!status) return null;
-  const phase = UPDATE_PHASES[status.phase] ?? { title: String(status.phase) };
-  const detail =
-    typeof phase.detail === "function" ? phase.detail(status) : phase.detail;
-
-  return (
-    <div className={`update-status update-${status.phase}`} role="status">
-      {/* Decorative — the text already says what's happening. */}
-      <span className="update-dot" aria-hidden="true" />
-      <div className="update-copy">
-        <p className="update-title">{phase.title}</p>
-        {detail && <p className="update-detail">{detail}</p>}
-      </div>
-      {status.phase === "failed" && (
-        <button className="update-dismiss" onClick={onDismiss}>
-          Dismiss
-        </button>
-      )}
-    </div>
   );
 }
 
