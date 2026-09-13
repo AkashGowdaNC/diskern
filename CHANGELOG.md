@@ -40,6 +40,12 @@ All notable changes to Diskern are documented here. The format follows
   lives in a `BrandMark` component (stroke-only, `currentColor`, always
   decorative) shared by the header and the scanning panel, so future
   empty or update states reuse the same asset instead of copying markup
+- The desktop updater now shows a small status toast instead of jumping
+  straight to the confirm dialog: checking, downloading, ready and
+  installing each get a quiet line, an update deferred by running work
+  waits and says so — then prompts once the app goes quiet — and a failed
+  download or install reads "Update failed — you can keep using Diskern"
+  rather than looking like the app froze
 
 ### Fixed
 
