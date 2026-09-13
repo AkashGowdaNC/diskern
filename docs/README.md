@@ -8,6 +8,7 @@
 | [FAQ.md](FAQ.md)                 | Common questions about safety and privacy       |
 | [RELEASING.md](RELEASING.md)     | Cutting a release; updater signing setup        |
 | [DEPENDENCY-AUTOMATION.md](DEPENDENCY-AUTOMATION.md) | Audit, auto-fix and Dependabot workflows |
+| [MERGE-QUEUE.md](MERGE-QUEUE.md) | Concurrent PRs, CI gate, branch protection setup and recovery |
 
 Release reviews:
 [2026-09-12 readiness review](audits/2026-09-12.md) — checks and follow-up
