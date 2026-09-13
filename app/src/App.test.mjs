@@ -74,3 +74,12 @@ test("capped lists retain the findings and duplicate-path styling hooks", () => 
   assert.match(jsx, /className="findings"/);
   assert.match(jsx, /className="dup-paths"/);
 });
+
+test("finding rows display a category badge", () => {
+  assert.match(
+    jsx,
+    /<span className="category-badge">\s*\{CATEGORY_LABEL\[f\.category\] \?\? f\.category\}\s*<\/span>/,
+    "each finding row should show a readable category badge"
+  );
+});
+

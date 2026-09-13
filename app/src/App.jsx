@@ -114,7 +114,14 @@ function FindingRow({ f, quarantineDir, onQuarantined, actionsDisabled = false }
 
   return (
     <li className={`finding verdict-${f.verdict}`}>
-      <span className="path">{f.entry.path}</span>
+      <span className="path">
+        {f.entry.path}
+        {f.category && (
+          <span className="category-badge">
+            {CATEGORY_LABEL[f.category] ?? f.category}
+          </span>
+        )}
+      </span>
       <span className="size">{humanBytes(f.entry.size)}</span>
       {/* Every reason, not just the matched rule: "referenced by 3
           projects" is what explains a risky row, and it is never the

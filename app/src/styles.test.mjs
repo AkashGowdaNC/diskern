@@ -95,3 +95,9 @@ test("preview rows have a quiet non-action label", () => {
   assert.match(css, /\.preview-note\s*\{/);
   assert.match(css, /\.preview-only\s*\{[^}]*opacity\s*:/s);
 });
+
+test("category badges have quiet styling", () => {
+  assert.match(css, /\.category-badge\s*\{/);
+  assert.match(css, /\.category-badge\s*\{[^}]*font-size\s*:/s);
+});
+
