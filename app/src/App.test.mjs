@@ -98,6 +98,8 @@ test("the header pairs the brand mark with the wordmark", () => {
     header.indexOf("<BrandMark") < header.indexOf("<h1>"),
     "the mark leads the wordmark in the brand row"
   );
+});
+
 // Just the UpdateStatus component — the update toast's whole markup lives
 // between its declaration and the App component that follows it.
 const update = jsx.slice(
