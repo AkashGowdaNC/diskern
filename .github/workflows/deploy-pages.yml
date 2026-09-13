@@ -61,6 +61,8 @@ jobs:
 
       - run: npm run build
         working-directory: site
+        env:
+          VITE_WISE_PAYMENT_URL: ${{ vars.VITE_WISE_PAYMENT_URL }}
 
       # GitHub Pages has no server-side routing: a direct visit to
       # /diskern/docs would 404 before React Router ever loads. Serving
