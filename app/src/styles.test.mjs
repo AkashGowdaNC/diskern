@@ -270,5 +270,12 @@ test("the update dot settles instead of freezing mid-pulse", () => {
     block,
     /\.update-dot\s*\{[^}]*animation\s*:\s*none\b/s,
     "reduced motion should leave a steady dot, not a half-faded one"
+test("the show-more toggle is a quiet secondary button", () => {
+  assert.match(css, /\.list-toggle\s*\{[^}]*border\s*:/s);
+  assert.match(css, /\.list-toggle\s*\{[^}]*background\s*:\s*none\b/s);
+  assert.match(
+    css,
+    /\.list-toggle\s*\{[^}]*opacity\s*:/s,
+    "the cap is a performance detail — it should not compete with real actions"
   );
 });
