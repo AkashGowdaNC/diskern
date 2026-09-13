@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom'
+
 export default function Footer() {
   return (
     <footer className="footer">
@@ -10,7 +12,8 @@ export default function Footer() {
         >
           View the code on GitHub
         </a>
-        .
+        .{' '}
+        <Link to="/support">Support the project</Link>.
       </p>
     </footer>
   )

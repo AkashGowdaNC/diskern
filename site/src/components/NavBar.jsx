@@ -19,6 +19,10 @@ export default function NavBar() {
           Diskern
         </Link>
 
+        <nav className="nav-links" aria-label="Main navigation">
+          <Link to="/support">Support</Link>
+        </nav>
+
         <div className="nav-actions">
           <button
             type="button"
