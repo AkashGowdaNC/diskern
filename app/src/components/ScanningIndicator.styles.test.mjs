@@ -74,6 +74,22 @@ test("cancelling calms the panel instead of snapping it away", () => {
   );
 });
 
+test(".sr-only hides the live region visually, not from the a11y tree", () => {
+  const block = /\.sr-only\s*\{([^}]*)\}/s.exec(css);
+  assert.ok(block, "styles.css must define the .sr-only helper the live region uses");
+  const body = block[1];
+  assert.match(body, /position\s*:\s*absolute/);
+  assert.match(body, /width\s*:\s*1px/);
+  assert.match(body, /height\s*:\s*1px/);
+  assert.match(body, /overflow\s*:\s*hidden/);
+  assert.match(body, /clip\s*:\s*rect\(\s*0/);
+  assert.doesNotMatch(
+    body,
+    /display\s*:\s*none|visibility\s*:\s*hidden/,
+    "display:none or visibility:hidden would remove it from the a11y tree entirely"
+  );
+});
+
 test("the scan panel enters with transform and opacity only", () => {
   assert.match(
     css,

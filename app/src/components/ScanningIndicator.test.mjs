@@ -33,6 +33,35 @@ test("the live counters still render from the same props", () => {
   );
 });
 
+test("phase transitions announce politely, without the count ticks", () => {
+  const liveRegion = /<p\s+className="sr-only"\s+aria-live="polite"[^>]*>([\s\S]*?)<\/p>/.exec(
+    scan
+  );
+  assert.ok(
+    liveRegion,
+    "a visually-hidden polite live region must carry the scan phase"
+  );
+  assert.match(liveRegion[1], /phase\b/, "the region announces the scan phase");
+  assert.doesNotMatch(
+    liveRegion[1],
+    /filesSeen|bytesSeen/,
+    "the ~150ms file/byte ticks must stay out of the announced text"
+  );
+  assert.match(
+    liveRegion[0],
+    /aria-atomic="true"/,
+    "announce the whole phrase, not a diff of it"
+  );
+});
+
+test("cancelling is announced as a status change, not silence", () => {
+  assert.match(
+    scan,
+    /aria-live="polite"[\s\S]*?cancelling\s*\?\s*"Stopping the scan/,
+    "pressing Cancel should announce that the scan is stopping"
+  );
+});
+
 test("cancelling gets its own calm state", () => {
   assert.match(
     scan,
