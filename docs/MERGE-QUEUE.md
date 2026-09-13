@@ -49,7 +49,15 @@ Use a new backup path on subsequent applications. Keep backups outside the
 checkout. `apply` verifies admin access, a successful latest gate from our
 CI push workflow on current `main`, and an unchanged main ref during preflight.
 It creates or updates only **Diskern main merge queue**, saves the previous
-policy before changing it, and leaves unrelated rulesets alone. Its default
+policy before changing it, and leaves unrelated rulesets alone. The local
+JSON must match the policy on that CI-validated main commit. If the managed
+policy has since been customized (for example, two approvals or signed
+commits were required), default `apply` refuses to replace it. Compare
+`plan` and `status`; use `apply --replace-policy --backup NEW_PATH` only
+after reviewing and deliberately accepting that replacement. Normal
+reapplication of an unchanged policy or the tool's recovery policy needs
+no replacement flag. A ruleset with an unexpected branch scope always needs
+manual inspection, including during recovery. Its default
 repository is `Coding-Moves/diskern`; use `--repo OWNER/REPO` for a rehearsal.
 Existing classic protection or organization rules continue to apply and
 should be inspected for incompatible required contexts before activation.

@@ -1,6 +1,7 @@
 """Preview/install the reviewed ruleset after CI lands; uses existing gh auth."""
 
 import argparse
+import base64
 import copy
 import json
 from pathlib import Path
@@ -9,6 +10,34 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 WRITABLE_FIELDS = ("name", "target", "enforcement", "bypass_actors", "conditions", "rules")
+
+
+def canonical(value):
+    """Ignore API ordering, without ignoring changed settings or extra rules."""
+    if isinstance(value, dict):
+        return {key: canonical(item) for key, item in sorted(value.items())}
+    if isinstance(value, list):
+        return sorted((canonical(item) for item in value), key=lambda item: json.dumps(item, sort_keys=True))
+    return value
+
+
+def validate_existing_policy(current, target, replace=False):
+    if current is None:
+        return
+    if current.get("target") != "branch" or current.get("conditions") != target["conditions"]:
+        raise ValueError("The named ruleset no longer targets exactly main; inspect it manually")
+    observed = {key: current[key] for key in WRITABLE_FIELDS if key in current}
+    if not replace and canonical(observed) not in [canonical(target), canonical(queue_recovery(target))]:
+        raise ValueError(
+            "The installed policy differs from the reviewed policy; inspect plan/status "
+            "and use --replace-policy only after reviewing the differences"
+        )
+
+
+def verify_reviewed_policy(content, policy):
+    remote = json.loads(base64.b64decode(content["content"]).decode("utf-8"))
+    if canonical(remote) != canonical(policy):
+        raise ValueError("Local policy differs from CI-validated main; use its reviewed policy")
 
 
 def api(repo, path="", method="GET", data=None):
@@ -57,8 +86,12 @@ def main():
     parser.add_argument("command", choices=["plan", "status", "apply", "recover"])
     parser.add_argument("--repo", default="Coding-Moves/diskern")
     parser.add_argument("--backup", type=Path, help="Required, new backup file for mutations")
+    parser.add_argument("--replace-policy", action="store_true",
+                        help="Apply only: explicitly replace a changed managed policy after reviewing it")
     args = parser.parse_args()
     policy = desired_policy()
+    if args.replace_policy and args.command != "apply":
+        raise ValueError("--replace-policy is only supported by apply")
     if args.command == "plan":
         print(json.dumps(policy, indent=2))
         return
@@ -77,6 +110,7 @@ def main():
     if args.command == "recover":
         if current is None:
             raise ValueError("The managed ruleset does not exist")
+        validate_existing_policy(current, policy, replace=True)
         target = queue_recovery(current)
     else:
         if repo.get("default_branch") != "main":
@@ -94,7 +128,10 @@ def main():
                    and r.get("path") == ".github/workflows/ci.yml"
                    and r.get("conclusion") == "success" for r in runs):
             raise ValueError("Wait for the complete CI push run on main to pass")
+        content = api(args.repo, f"/contents/.github/rulesets/main.json?ref={sha}")
+        verify_reviewed_policy(content, policy)
         target = desired_policy(check["app"]["id"])
+        validate_existing_policy(current, target, replace=args.replace_policy)
         if api(args.repo, "/git/ref/heads/main")["object"]["sha"] != sha:
             raise ValueError("main changed during preflight; rerun after its CI passes")
     # No settings are changed until all preconditions have passed. Never
