@@ -37,6 +37,8 @@ to match.
 
 The Support page uses a public Wise receiving/payment link. Bank details are
 managed in Wise, not in the desktop app or this repository.
+Supporters follow the link directly; the site does not require an invoice
+request or a conversation with the maintainer before payment when configured.
 
 For local development, copy `.env.example` to `.env.local` in this directory.
 Set this value to the HTTPS payment link copied from your Wise account:
