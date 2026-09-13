@@ -2,6 +2,19 @@ const REPO_URL = 'https://github.com/Coding-Moves/diskern'
 const ORG_URL = 'https://github.com/Coding-Moves'
 const CONTACT_URL = 'https://github.com/Muawiya-contact'
 
+// Only publish a Wise HTTPS link; incomplete configuration keeps contact available.
+function getWisePaymentUrl(value) {
+  try {
+    const url = new URL(value)
+    return url.protocol === 'https:' && url.hostname === 'wise.com' &&
+      !url.username && !url.password ? url.href : null
+  } catch {
+    return null
+  }
+}
+
+const WISE_PAYMENT_URL = getWisePaymentUrl(import.meta.env.VITE_WISE_PAYMENT_URL)
+
 export default function Support() {
   return (
     <main className="support-page container">
@@ -14,8 +27,8 @@ export default function Support() {
           design polish, and contributor support.
         </p>
         <div className="support-actions">
-          <a className="support-button support-button-primary" href={CONTACT_URL}>
-            Discuss sponsorship
+          <a className="support-button support-button-primary" href={WISE_PAYMENT_URL || CONTACT_URL}>
+            {WISE_PAYMENT_URL ? 'Sponsor through Wise' : 'Discuss sponsorship'}
           </a>
           <a className="support-button" href={REPO_URL}>
             View Diskern on GitHub
@@ -24,17 +37,16 @@ export default function Support() {
       </section>
 
       <section className="support-card" aria-labelledby="payment-title">
-        <h2 id="payment-title">Professional payment setup</h2>
+        <h2 id="payment-title">Sponsor through Wise</h2>
         <p>
-          GitHub Sponsors is currently pending for Coding Moves, so sponsors can
-          use an external payment route for now. For international sponsors,
-          Wise is the preferred option because it is built for cross-border
-          transfers and avoids publishing raw bank details in the repository.
+          Support ongoing maintenance with a payment through Wise.
+          {WISE_PAYMENT_URL
+            ? ' Follow the link to see the recipient and payment options on Wise before sending.'
+            : ' Contact the maintainer to arrange a Wise payment.'}
         </p>
         <p>
-          If you would like to sponsor this work, please contact the maintainer
-          first. The maintainer can then share the correct Wise payment link or
-          invoice details privately.
+          For sponsorship questions or invoice requests, visit the
+          {' '}<a href={CONTACT_URL}>maintainer’s profile</a> for contact options.
         </p>
       </section>
 
@@ -52,20 +64,17 @@ export default function Support() {
         <article className="support-card">
           <h2>Current sponsor route</h2>
           <ul>
-            <li>Primary route: Wise payment link shared privately.</li>
-            <li>Local route: Pakistan bank transfer only when arranged directly.</li>
+            <li>Payments are handled through Wise.</li>
             <li>Future route: GitHub Sponsors once the account is approved.</li>
           </ul>
         </article>
       </section>
 
       <section className="support-card" aria-labelledby="trust-title">
-        <h2 id="trust-title">Why details are not listed publicly</h2>
+        <h2 id="trust-title">Thank you for supporting the project</h2>
         <p>
-          Public repositories should not expose personal bank account numbers,
-          branch details, or sensitive payment identifiers. Keeping payment
-          details private protects the maintainer while still giving sponsors a
-          clear professional path to support the project.
+          Every contribution helps us spend more time improving Diskern and
+          supporting its contributors.
         </p>
         <p>
           Explore more work from <a href={ORG_URL}>Coding Moves</a> or open a
