@@ -474,4 +474,126 @@ mod tests {
         assert_eq!(cat, Category::Unknown);
         assert!(rule.is_none());
     }
+
+    /// Issue #159. One common path per embedded rule, in base.json order —
+    /// the fixture that fails loudly when a rules edit stops a rule matching
+    /// where it used to. Asserting the rule id (not just the category)
+    /// proves the named rule fired rather than some other pattern that
+    /// happens to produce the same verdict.
+    ///
+    /// The paths are chosen to reach only their own rule: the WinSxS and
+    /// Installer-cache fixtures use extensions the installer rule doesn't
+    /// claim, so they can't pass through `installer-packages` by accident.
+    const EMBEDDED_RULE_FIXTURES: &[(&str, &str, Category, Verdict)] = &[
+        (
+            "C:/Windows/System32/DriverStore/FileRepository/nv_dispi.inf",
+            "windows-driverstore",
+            Category::SystemCritical,
+            Verdict::Protected,
+        ),
+        (
+            "C:/Windows/WinSxS/amd64_microsoft-windows-netfx/component.dll",
+            "windows-winsxs",
+            Category::SystemCritical,
+            Verdict::Protected,
+        ),
+        (
+            "C:/Windows/Installer/9f3ab2.msp",
+            "windows-installer-cache",
+            Category::SystemCritical,
+            Verdict::Protected,
+        ),
+        (
+            "/home/u/.cache/google-chrome/Default/Cache/f_000001",
+            "chrome-cache",
+            Category::BrowserCache,
+            Verdict::Safe,
+        ),
+        (
+            "/home/u/.cache/mozilla/firefox/ab12.default/cache2/entries/9F3AB",
+            "firefox-cache",
+            Category::BrowserCache,
+            Verdict::Safe,
+        ),
+        (
+            "/home/u/proj/target/release/diskern",
+            "rust-target",
+            Category::BuildArtifact,
+            Verdict::Review,
+        ),
+        (
+            "/home/u/proj/node_modules/react/index.js",
+            "node-modules",
+            Category::BuildArtifact,
+            Verdict::Review,
+        ),
+        (
+            "C:/Users/u/AppData/Local/pip/cache/wheels/aa/pkg.whl",
+            "pip-cache",
+            Category::PackageManagerCache,
+            Verdict::Safe,
+        ),
+        (
+            "/home/u/.npm/_cacache/index-v5/ab/cd/entry",
+            "npm-cache",
+            Category::PackageManagerCache,
+            Verdict::Safe,
+        ),
+        (
+            "/var/log/apt/history.log",
+            "unix-system-logs",
+            Category::Log,
+            Verdict::Review,
+        ),
+        (
+            "/Users/u/Library/Logs/SomeApp/app.log",
+            "macos-user-logs",
+            Category::Log,
+            Verdict::Review,
+        ),
+        (
+            "C:/Users/u/AppData/Local/Microsoft/Windows/WER/ReportQueue/x.wer",
+            "windows-crash-logs",
+            Category::Log,
+            Verdict::Review,
+        ),
+        (
+            "/home/u/Downloads/Diskern_0.1.0_amd64.dmg",
+            "installer-packages",
+            Category::Installer,
+            Verdict::Review,
+        ),
+        (
+            "C:/Users/u/AppData/Local/Temp/scratch.tmp",
+            "temp-dirs",
+            Category::TempFile,
+            Verdict::Review,
+        ),
+    ];
+
+    #[test]
+    fn each_embedded_rule_classifies_a_common_path() {
+        let db = RulesDb::embedded();
+        for &(path, id, category, verdict) in EMBEDDED_RULE_FIXTURES {
+            let (cat, actual_verdict, rule) = db.classify(std::path::Path::new(path));
+            assert_eq!(rule.map(|rule| rule.id.as_str()), Some(id), "{path}");
+            assert_eq!(cat, category, "{path}");
+            assert_eq!(actual_verdict, verdict, "{path}");
+        }
+    }
+
+    /// The fixture table only protects the rules it names: a rule added to
+    /// base.json without a row here is coverage that silently doesn't exist.
+    #[test]
+    fn every_embedded_rule_has_a_fixture() {
+        for rule in &RulesDb::embedded().rules {
+            assert!(
+                EMBEDDED_RULE_FIXTURES
+                    .iter()
+                    .any(|(_, id, _, _)| *id == rule.id),
+                "no fixture path for rule {}",
+                rule.id
+            );
+        }
+    }
 }
