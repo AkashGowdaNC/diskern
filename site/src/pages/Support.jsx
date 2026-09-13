@@ -39,13 +39,14 @@ export default function Support() {
       <section className="support-card" aria-labelledby="payment-title">
         <h2 id="payment-title">Sponsor through Wise</h2>
         <p>
-          Support ongoing maintenance with a payment through Wise.
+          Make a voluntary contribution to support ongoing maintenance.
           {WISE_PAYMENT_URL
             ? ' Follow the link to see the recipient and payment options on Wise before sending.'
             : ' Contact the maintainer to arrange a Wise payment.'}
         </p>
         <p>
-          For sponsorship questions or invoice requests, visit the
+          You can use the Wise link directly without requesting an invoice
+          through this site. For sponsorship questions, visit the
           {' '}<a href={CONTACT_URL}>maintainer’s profile</a> for contact options.
         </p>
       </section>
