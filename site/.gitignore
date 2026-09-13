@@ -25,3 +25,8 @@ public/latest-release.json
 *.njsproj
 *.sln
 *.sw?
+
+# Local sponsorship configuration (commit only the empty example).
+.env
+.env.*
+!.env.example
