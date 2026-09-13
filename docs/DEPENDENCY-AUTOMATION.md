@@ -132,30 +132,26 @@ Version updates come from [dependabot.yml](../.github/dependabot.yml).
 Security updates do not — they are driven by that setting, they ignore
 the `groups` config, and they open one PR per advisory.
 
-## The GITHUB_TOKEN caveat
+## CI and the merge queue
 
-A PR opened using `GITHUB_TOKEN` does not trigger other workflows.
-GitHub does this deliberately, to stop a workflow from triggering itself
-in a loop. The practical effect: the auto-fix PR arrives with no CI
-checks on it.
+Auto-fix's verification is an early check. Every dependency PR must also
+pass the ordinary `ready-to-merge` gate, receive review, and use the
+[merge queue](MERGE-QUEUE.md) once it is enabled. No automation account has
+a configured review, CI, or queue bypass.
 
-Two ways to live with that:
+With the default `GITHUB_TOKEN`, GitHub creates PR workflow runs in a state
+that requires a maintainer to select **Approve workflows to run**. Do that
+before reviewing CI or adding the PR to the queue. If no run appears on an
+older GitHub deployment, a maintainer can close and reopen the PR to start
+normal PR CI. Do not merge based only on the auto-fix workflow's checks.
 
-- **As shipped.** Auto-fix runs fmt, clippy and tests itself before
-  opening the PR, so the code is checked even though the PR shows no
-  check runs. Closing and reopening the PR by hand also kicks CI off.
-- **With a PAT.** Create a fine-grained personal access token with
-  *Contents: read and write* and *Pull requests: read and write* on this
-  repository, save it as the repository secret `AUTOMATION_TOKEN`, and
-  swap the `token:` input in
-  [auto-fix.yml](../.github/workflows/auto-fix.yml):
-
-  ```yaml
-  token: ${{ secrets.AUTOMATION_TOKEN }}
-  ```
-
-  PRs opened with a PAT do trigger workflows, so CI runs normally. The
-  cost is a token to rotate.
+The workflow supports an optional repository secret `AUTOMATION_TOKEN`.
+A fine-grained PAT needs Contents and Pull requests read/write for this
+repository. A suitable GitHub App installation token also works. These
+credentials allow PR CI to start without the GITHUB_TOKEN approval prompt;
+keep them limited to this repository and rotate them as needed. The default
+path needs no additional credential. See [GitHub's workflow-trigger
+rules](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow).
 
 ## Assignee
 

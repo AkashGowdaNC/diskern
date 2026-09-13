@@ -1,52 +1,6 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
 import { test } from "node:test";
-import { fileURLToPath } from "node:url";
-
-const css = readFileSync(
-  join(dirname(fileURLToPath(import.meta.url)), "styles.css"),
-  "utf8"
-);
-
-// The body of the `@media (prefers-reduced-motion: reduce)` block, found
-// by walking braces from its opening '{' — a lazy regex would stop at the
-// first inner rule's close.
-function reducedMotionBlock() {
-  const marker = /@media\s*\(\s*prefers-reduced-motion\s*:\s*reduce\s*\)\s*\{/;
-  const match = marker.exec(css);
-  assert.ok(match, "styles.css must handle prefers-reduced-motion: reduce");
-
-  const start = match.index + match[0].length;
-  let depth = 1;
-  let end = start;
-  for (; end < css.length && depth > 0; end++) {
-    if (css[end] === "{") depth++;
-    if (css[end] === "}") depth--;
-  }
-  return css.slice(start, end - 1);
-}
-
-// Same brace-walk for a `@keyframes <name> { … }` body.
-function keyframesBlock(name) {
-  const marker = new RegExp(`@keyframes\\s+${name}\\s*\\{`);
-  const match = marker.exec(css);
-  assert.ok(match, `styles.css must define @keyframes ${name}`);
-
-  const start = match.index + match[0].length;
-  let depth = 1;
-  let end = start;
-  for (; end < css.length && depth > 0; end++) {
-    if (css[end] === "{") depth++;
-    if (css[end] === "}") depth--;
-  }
-  return css.slice(start, end - 1);
-}
-
-// Layout-affecting properties: animating these is what would make the
-// scan panel shift layout or feel jumpy.
-const LAYOUT_PROPS =
-  /(?:^|[{;\s])(?:left|right|top|bottom|width|height|margin|padding)\s*:/;
+import { css, reducedMotionBlock, keyframesBlock, LAYOUT_PROPS } from "../test-support/styles.mjs";
 
 test("the stylesheet handles prefers-reduced-motion", () => {
   assert.match(css, /@media\s*\(\s*prefers-reduced-motion\s*:\s*reduce\s*\)/);
@@ -57,15 +11,6 @@ test("reduced motion collapses animations and transitions", () => {
   assert.match(block, /animation-duration\s*:\s*0(\.\d+)?m?s\b/);
   assert.match(block, /animation-iteration-count\s*:\s*1\b/);
   assert.match(block, /transition-duration\s*:\s*0(\.\d+)?m?s\b/);
-});
-
-test("the indeterminate scan bar stops sweeping under reduced motion", () => {
-  const block = reducedMotionBlock();
-  assert.match(
-    block,
-    /\.progress-fill-indeterminate\s*\{[^}]*animation\s*:\s*none\b/s,
-    "the looping scan animation must be switched off, not just shortened"
-  );
 });
 
 test("section bodies animate expand and collapse through the grid row", () => {
@@ -127,15 +72,6 @@ test("the chevron rotates instead of swapping glyphs", () => {
   assert.match(css, /\.chevron\.open\s*\{[^}]*transform\s*:\s*rotate\s*\(/s);
 });
 
-test("scan progress exposes a readable phase label", () => {
-  assert.match(css, /\.progress-phase\s*\{/);
-  assert.match(
-    css,
-    /\.progress-phase\s*\{[^}]*font-weight\s*:\s*600\b/s,
-    "the phase should read as the main scan status, above the numeric counter"
-  );
-});
-
 test("the shared mark has a sane default size", () => {
   // BrandMark renders no width/height attributes, so bare usage would
   // fall back to the replaced-element default (300×150) without this.
@@ -155,149 +91,7 @@ test("the header pairs the brand mark with the wordmark", () => {
   );
 });
 
-test("the scanning state is a branded panel, not a bare bar", () => {
-  assert.match(
-    css,
-    /\.scan-progress\s*\{[^}]*border\s*:[^}]*border-radius\s*:/s,
-    "the scan panel needs a bordered card treatment"
-  );
-  assert.match(css, /\.scan-mark\s*\{/, "a brand/shield mark must be styled");
-  assert.match(css, /\.scan-status\s*\{[^}]*font-weight\s*:\s*600\b/s);
-});
-
-test("the scan mark pulses through transform and opacity only", () => {
-  assert.match(css, /\.scan-mark\s*\{[^}]*animation\s*:[^}]*\bscan-pulse\b/s);
-  const pulse = keyframesBlock("scan-pulse");
-  assert.match(pulse, /opacity\s*:/);
-  assert.match(pulse, /transform\s*:/);
-  assert.doesNotMatch(
-    pulse,
-    LAYOUT_PROPS,
-    "the pulse must not animate layout properties"
-  );
-});
-
-test("the indeterminate sweep animates transform, never layout", () => {
-  const sweep = keyframesBlock("indeterminate");
-  assert.match(
-    sweep,
-    /transform\s*:\s*translateX\(/,
-    "the sweep should move with translateX so it stays off layout"
-  );
-  assert.doesNotMatch(
-    sweep,
-    LAYOUT_PROPS,
-    "animating left/top/width/height would shift layout every frame"
-  );
-});
-
-test("cancelling calms the panel instead of snapping it away", () => {
-  assert.match(
-    css,
-    /\.scan-progress\.cancelling\s*\{[^}]*opacity\s*:/s,
-    "the cancelling panel should dim, not vanish"
-  );
-  assert.match(
-    css,
-    /\.scan-progress\.cancelling[^{]*\.progress-fill-indeterminate\s*\{[^}]*animation-play-state\s*:\s*paused/s,
-    "the sweep should freeze in place while the scan stops"
-  );
-  assert.match(
-    css,
-    /\.scan-progress\.cancelling[^{]*\.scan-mark\b[^{]*\{[^}]*animation-play-state\s*:\s*paused/s,
-    "the shield pulse should freeze too"
-  );
-});
-
-test("the scan panel enters with transform and opacity only", () => {
-  assert.match(
-    css,
-    /\.scan-progress\s*\{[^}]*animation\s*:[^}]*\bscan-in\b/s,
-    "the panel mounts on scan start and needs a short entrance"
-  );
-  const entrance = keyframesBlock("scan-in");
-  assert.doesNotMatch(entrance, LAYOUT_PROPS);
-});
-
-
 test("preview rows have a quiet non-action label", () => {
   assert.match(css, /\.preview-note\s*\{/);
   assert.match(css, /\.preview-only\s*\{[^}]*opacity\s*:/s);
-});
-
-test("the update toast is pinned out of the app's layout", () => {
-  assert.match(
-    css,
-    /\.update-status\s*\{[^}]*position\s*:\s*fixed\b/s,
-    "a status toast must float above the app, never push content around"
-  );
-  assert.match(css, /\.update-status\s*\{[^}]*bottom\s*:/s);
-  assert.match(
-    css,
-    /\.update-status\s*\{[^}]*max-width\s*:/s,
-    "it stays a small card even when the status text runs long"
-  );
-});
-
-test("the update toast enters with transform and opacity only", () => {
-  assert.match(
-    css,
-    /\.update-status\s*\{[^}]*animation\s*:[^}]*\bupdate-in\b/s,
-    "each new status card gets the same short entrance as the scan panel"
-  );
-  const entrance = keyframesBlock("update-in");
-  assert.doesNotMatch(entrance, LAYOUT_PROPS);
-});
-
-test("active update phases pulse the dot without touching layout", () => {
-  // The pulsing rule may be a selector list, so allow other selectors
-  // between the phase class and the declaration block.
-  assert.match(
-    css,
-    /\.update-downloading\s+\.update-dot[^{]*\{[^}]*animation\s*:[^}]*\bupdate-pulse\b/s,
-    "downloading needs proof of life"
-  );
-  assert.match(
-    css,
-    /\.update-installing\s+\.update-dot[^{]*\{[^}]*animation\s*:[^}]*\bupdate-pulse\b/s,
-    "installing needs it too"
-  );
-  const pulse = keyframesBlock("update-pulse");
-  assert.match(pulse, /opacity\s*:/);
-  assert.match(pulse, /transform\s*:/);
-  assert.doesNotMatch(pulse, LAYOUT_PROPS);
-});
-
-test("a deferred update looks calm, a failed one looks red", () => {
-  // The default dot is a quiet grey — deferred simply doesn't repaint it.
-  assert.match(
-    css,
-    /\.update-deferred\s+\.update-dot|\.update-dot\s*\{[^}]*rgba\(128,\s*128,\s*128/s,
-    "waiting on the current operation should read as patient, not urgent"
-  );
-  assert.match(
-    css,
-    /\.update-failed\s+\.update-dot\s*\{[^}]*#c0392b/s,
-    "failure gets the same red as every other error surface"
-  );
-  assert.match(css, /\.update-dismiss\s*\{/, "a failed toast can be dismissed");
-});
-
-test("the update dot settles instead of freezing mid-pulse", () => {
-  const block = reducedMotionBlock();
-  assert.match(
-    block,
-    /\.update-dot\s*\{[^}]*animation\s*:\s*none\b/s,
-    "reduced motion should leave a steady dot, not a half-faded one"
-  );
-});
-
-test("the show-more toggle is a quiet secondary button", () => {
-  assert.match(css, /\.list-toggle\s*\{[^}]*border\s*:/s);
-  assert.match(css, /\.list-toggle\s*\{[^}]*background\s*:\s*none\b/s);
-  assert.match(
-    css,
-    /\.list-toggle\s*\{[^}]*opacity\s*:/s,
-    "the cap is a performance detail — it should not compete with real actions"
-  );
 });

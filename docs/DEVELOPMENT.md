@@ -180,3 +180,26 @@ comes out owned by you. Rootful Docker does not — it leaves a
 root-owned `target/` in your checkout. Mount it elsewhere if that is
 what you have:
 `-v "$PWD/../diskern-target":/work/target`.
+
+
+## Repository tooling and component tests
+
+The app test command discovers `.test.js` and `.test.mjs` recursively under
+`app/src/`, including tests alongside components. Shared test support lives
+outside that discovery tree in `app/test-support/`. The extracted scanning,
+update-status, and capped-list components own their markup tests; `App.test.mjs`
+checks integration wiring. Component style tests are also separate, while
+production CSS retains its existing cascade.
+
+Repository tooling requires Python 3.10+ and Node 22+:
+
+```sh
+python3 -m pip install -r tests/requirements.txt
+python3 -m unittest discover -s tests -v
+node --test tests/*.test.mjs
+python3 scripts/changelog.py check
+```
+
+These checks run in the `repository` CI job. The final required gate includes
+this job along with the existing frontend, engine, platform, spelling, and
+link checks. See [merge queue operation and recovery](MERGE-QUEUE.md).

@@ -24,6 +24,19 @@ can verify updates.
 
 Choose the next version and update all of these together:
 
+First collect the independent change fragments, reviewing the preview before
+writing. Existing Unreleased entries and released history are preserved:
+
+```sh
+python3 scripts/changelog.py check
+python3 scripts/changelog.py build
+python3 scripts/changelog.py build --write
+```
+
+Commit fragment deletions with the generated changelog in the release PR.
+Keep the generated fragment markers when moving Unreleased into a dated
+release section; they make interrupted collection safe to retry.
+
 | File | What to update |
 | --- | --- |
 | `Cargo.toml` | `[workspace.package].version` |
@@ -41,7 +54,7 @@ After editing the version fields, let Cargo and npm refresh their lockfiles:
 cargo check -p diskern-core -p diskern-cli
 (cd app && npm install --package-lock-only --ignore-scripts)
 git diff -- Cargo.toml Cargo.lock app/package.json app/package-lock.json \
-  app/src-tauri/tauri.conf.json CHANGELOG.md README.md docs/releases/
+  app/src-tauri/tauri.conf.json CHANGELOG.md changelog.d/ README.md docs/releases/
 ```
 
 Check that the diff contains the intended version updates. Keep unrelated

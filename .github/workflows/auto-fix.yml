@@ -1,9 +1,9 @@
 # Turns a red audit into a reviewable PR instead of a chore. Runs on a
 # schedule, on demand, and immediately after Audit finishes red.
 #
-# Note: PRs opened with GITHUB_TOKEN do not start other workflows, so the
-# PR this opens arrives without CI. See docs/DEPENDENCY-AUTOMATION.md for
-# the PAT swap that fixes it; the checks below run here in the meantime.
+# GITHUB_TOKEN-created PR workflows need a maintainer's approval to run.
+# An optional AUTOMATION_TOKEN can start normal PR CI without that prompt.
+# Either way, the required PR gate and merge queue still apply.
 name: Dependency auto-fix
 
 on:
@@ -73,14 +73,14 @@ jobs:
           fi
 
       # Never open a PR that CI would immediately turn red. Same three gates
-      # as ci.yml, and the same reason for skipping the Tauri crate: building
-      # it needs webkitgtk, which the release workflow already covers.
+      # as ci.yml. These are an early check only: the PR still needs the full
+      # applicable CI gate, including Tauri, before it can enter the queue.
       - name: Verify the workspace still passes
         if: steps.diff.outputs.changed == 'true'
         run: |
           cargo fmt --check
-          cargo clippy -p diskern-core -p diskern-cli -- -D warnings
-          cargo test -p diskern-core -p diskern-cli
+          cargo clippy -p diskern-core -p diskern-cli --all-targets --all-features -- -D warnings
+          cargo test -p diskern-core -p diskern-cli --all-features
 
       # Written to RUNNER_TEMP, not the workspace: create-pull-request stages
       # every uncommitted file it finds, so a scratch file in the repo root
@@ -127,7 +127,7 @@ jobs:
         if: steps.diff.outputs.changed == 'true'
         uses: peter-evans/create-pull-request@v8
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.AUTOMATION_TOKEN || secrets.GITHUB_TOKEN }}
           base: ${{ github.event.repository.default_branch }}
           branch: automation/cargo-update
           delete-branch: true

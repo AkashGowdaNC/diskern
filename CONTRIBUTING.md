@@ -112,8 +112,21 @@ Before you open it:
 1. `cargo fmt --all`
 2. `cargo clippy -p diskern-core -p diskern-cli --all-targets -- -D warnings`
 3. `cargo test -p diskern-core -p diskern-cli`
-4. Update [CHANGELOG.md](CHANGELOG.md) under `Unreleased` if the change
-   is user-visible.
+4. Add a unique [changelog fragment](changelog.d/README.md) if the change
+   is user-visible. Only release-preparation PRs collect fragments into
+   the shared `CHANGELOG.md`.
+
+Keep PRs short-lived. Put independent UI work in separate components and
+component tests under `app/src/components/`; `npm test` discovers nested
+tests automatically. Identify dependencies in the PR and coordinate with
+authors changing the same component. A dependent PR should build on its
+prerequisite rather than duplicate its changes. Keep broad refactors and
+formatting separate from features.
+
+After review and CI, use the [merge queue](docs/MERGE-QUEUE.md) when enabled.
+It tests combined changes before integration. A conflict resolution still
+needs review, and a new reviewable push needs fresh approval from someone
+other than its pusher.
 
 `--workspace` instead of `-p …` also builds the desktop app, which needs
 the [platform webview

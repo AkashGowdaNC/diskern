@@ -4,11 +4,16 @@ on:
   push:
     branches: [main]
   pull_request:
+  merge_group:
+    types: [checks_requested]
 
 # A new push to the same PR cancels the still-running previous run —
 # no point finishing checks for a commit that's already been superseded.
+permissions:
+  contents: read
+
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -20,11 +25,12 @@ jobs:
       contents: read
       pull-requests: read
     outputs:
-      app: ${{ steps.filter.outputs.app }}
+      app: ${{ steps.scope.outputs.app }}
     steps:
       - uses: actions/checkout@v7
       - uses: dorny/paths-filter@v4
         id: filter
+        if: github.event_name == 'pull_request'
         with:
           filters: |
             app:
@@ -33,6 +39,20 @@ jobs:
               - 'Cargo.toml'
               - 'Cargo.lock'
               - '.github/workflows/ci.yml'
+              - 'scripts/**'
+              - 'tests/**'
+      - name: Select validation scope
+        id: scope
+        env:
+          CI_EVENT: ${{ github.event_name }}
+          FILTER_APP: ${{ steps.filter.outputs.app }}
+        run: |
+          if [[ "$CI_EVENT" == "pull_request" ]]; then
+            [[ "$FILTER_APP" == "true" || "$FILTER_APP" == "false" ]]
+            echo "app=$FILTER_APP" >> "$GITHUB_OUTPUT"
+          else
+            echo "app=true" >> "$GITHUB_OUTPUT"
+          fi
 
   # Formatting and lints answer the same on every platform, so they run
   # once rather than three times.
@@ -131,6 +151,8 @@ jobs:
           cache-dependency-path: app/package-lock.json
       - run: npm ci
         working-directory: app
+      - run: npm test
+        working-directory: app
       - run: npm run build
         working-directory: app
 
@@ -181,7 +203,7 @@ jobs:
       - run: npm test
       - run: npm run build
 
-  # Desktop app frontend: Vite build only — no Tauri/webkitgtk needed,
+  # Desktop app frontend: tests and Vite build — no Tauri/webkitgtk needed,
   # so JSX errors surface here instead of in the slow release workflow.
   app-frontend:
     runs-on: ubuntu-22.04
@@ -198,3 +220,31 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+
+  repository:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: python -m pip install -r tests/requirements.txt
+      - run: python -m unittest discover -s tests -v
+      - run: node --test tests/*.test.mjs
+      - run: python scripts/changelog.py check
+
+  # Keep this exact check name stable: it is the ruleset's required context.
+  ready-to-merge:
+    if: ${{ always() }}
+    needs: [changes, lint, test, typos, doc-links, site, app-frontend, repository, app-tauri]
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: Require every applicable job to succeed
+        env:
+          CI_EVENT: ${{ github.event_name }}
+          CI_NEEDS: ${{ toJSON(needs) }}
+        run: python3 scripts/ci_gate.py
