@@ -40,6 +40,23 @@ def verify_reviewed_policy(content, policy):
         raise ValueError("Local policy differs from CI-validated main; use its reviewed policy")
 
 
+def validate_reviewers(collaborators, policy):
+    review = next(rule["parameters"] for rule in policy["rules"] if rule["type"] == "pull_request")
+    approvals = review["required_approving_review_count"]
+    if review["require_last_push_approval"]:
+        approvals = max(approvals, 1)
+    # The author cannot approve their own PR. Bots and pending invitations
+    # are not independent user reviewers. This is a minimum, not proof that
+    # a reviewer is available for every author/pusher combination.
+    writers = {user["login"] for user in collaborators
+               if user.get("type") == "User" and user.get("permissions", {}).get("push")}
+    if len(writers) < approvals + 1:
+        raise ValueError(
+            f"Need at least {approvals + 1} user accounts with write access; found {len(writers)}. "
+            "Add an independent reviewer before enabling protected main"
+        )
+
+
 def api(repo, path="", method="GET", data=None):
     command = ["gh", "api", f"repos/{repo}{path}", "--method", method]
     if data is not None:
@@ -117,6 +134,8 @@ def main():
             raise ValueError("This policy requires main as the default branch")
         if not repo.get("allow_merge_commit"):
             raise ValueError("Enable merge commits or explicitly review the policy's merge method")
+        collaborators = api(args.repo, "/collaborators?affiliation=all&per_page=100")
+        validate_reviewers(collaborators, policy)
         sha = api(args.repo, "/git/ref/heads/main")["object"]["sha"]
         checks = api(args.repo, f"/commits/{sha}/check-runs?per_page=100")["check_runs"]
         check = successful_gate(checks, sha)

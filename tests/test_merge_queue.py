@@ -7,7 +7,10 @@ import unittest
 from unittest.mock import patch
 
 from scripts.merge_queue import (desired_policy, main, queue_recovery, successful_gate,
-                                 validate_existing_policy, verify_reviewed_policy)
+                                 validate_existing_policy, verify_reviewed_policy, validate_reviewers)
+
+
+WRITERS = [{"login": name, "type": "User", "permissions": {"push": True}} for name in ["author", "reviewer"]]
 
 
 def gate(outcome="success", check_id=1, sha="abc"):
@@ -17,6 +20,13 @@ def gate(outcome="success", check_id=1, sha="abc"):
 
 
 class QueuePolicyTests(unittest.TestCase):
+    def test_review_policy_requires_an_independent_eligible_user(self):
+        validate_reviewers(WRITERS, desired_policy())
+        for users in [WRITERS[:1], WRITERS[:1] + [dict(WRITERS[1], type="Bot")],
+                      WRITERS[:1] + [dict(WRITERS[1], permissions={"pull": True})]]:
+            with self.subTest(users=users), self.assertRaisesRegex(ValueError, "independent reviewer"):
+                validate_reviewers(users, desired_policy())
+
     def test_apply_does_not_silently_remove_stricter_or_additional_protection(self):
         desired = desired_policy(123)
         changed = copy.deepcopy(desired)
@@ -96,6 +106,7 @@ class QueuePolicyTests(unittest.TestCase):
             calls.append((path, method))
             if path == "/rulesets?per_page=100": return []
             if path == "": return {"permissions": {"admin": True}, "default_branch": "main", "allow_merge_commit": True}
+            if path.startswith("/collaborators?"): return WRITERS
             if path == "/git/ref/heads/main": return {"object": {"sha": "abc"}}
             if "check-runs" in path: return {"check_runs": []}
             self.fail(f"Unexpected API call {path}")
@@ -106,7 +117,7 @@ class QueuePolicyTests(unittest.TestCase):
             self.assertFalse(backup.exists())
         self.assertTrue(all(method == "GET" for _, method in calls))
 
-    def apply_fixture(self, backup, *, changed=False, workflow=".github/workflows/ci.yml", current=None):
+    def apply_fixture(self, backup, *, changed=False, workflow=".github/workflows/ci.yml", current=None, writers=WRITERS):
         calls = []
         reads = 0
         def fake_api(repo, path="", method="GET", data=None):
@@ -119,6 +130,7 @@ class QueuePolicyTests(unittest.TestCase):
                 return [{"name": "Unrelated policy", "id": 1}] + ([{"name": current["name"], "id": 99}] if current else [])
             if path == "/rulesets/99": return current
             if path == "": return {"permissions": {"admin": True}, "default_branch": "main", "allow_merge_commit": True}
+            if path.startswith("/collaborators?"): return writers
             if path == "/git/ref/heads/main":
                 reads += 1
                 return {"object": {"sha": "new" if changed and reads > 1 else "abc"}}
@@ -129,6 +141,15 @@ class QueuePolicyTests(unittest.TestCase):
                 return {"content": base64.b64encode(json.dumps(desired_policy()).encode()).decode()}
             self.fail(f"Unexpected API call {path}")
         return fake_api, calls
+
+    def test_single_writer_repository_cannot_be_locked_by_activation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            backup = Path(directory) / "backup.json"
+            api, calls = self.apply_fixture(backup, writers=WRITERS[:1])
+            with patch("scripts.merge_queue.api", side_effect=api), patch("sys.argv", ["merge_queue.py", "apply", "--backup", str(backup)]):
+                with self.assertRaisesRegex(ValueError, "independent reviewer"): main()
+            self.assertFalse(backup.exists())
+            self.assertTrue(all(method == "GET" for _, method, _ in calls))
 
     def test_custom_policy_requires_explicit_replacement_before_any_write(self):
         current = desired_policy(123)

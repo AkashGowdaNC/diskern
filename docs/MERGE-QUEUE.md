@@ -32,7 +32,9 @@ and signed releases do not run on merge-group events.
 The JSON policy is a proposed configuration until installed. Merely merging
 the files does **not** enable protection. Enabling a required check before
 its workflow exists would block the repository. Perform these steps with a
-repository administrator account after the PR lands:
+repository administrator account after the PR lands. First ensure a second
+trusted contributor has accepted write access and can review maintainer-authored
+changes; setup refuses activation when this minimum is not met:
 
 ```sh
 git switch main
@@ -49,7 +51,8 @@ Use a new backup path on subsequent applications. Keep backups outside the
 checkout. `apply` verifies admin access, a successful latest gate from our
 CI push workflow on current `main`, and an unchanged main ref during preflight.
 It creates or updates only **Diskern main merge queue**, saves the previous
-policy before changing it, and leaves unrelated rulesets alone. The local
+policy before changing it, and leaves unrelated rulesets alone. It also checks
+that enough user accounts have write access for the required approvals. The local
 JSON must match the policy on that CI-validated main commit. If the managed
 policy has since been customized (for example, two approvals or signed
 commits were required), default `apply` refuses to replace it. Compare
@@ -72,6 +75,9 @@ as well as direct pushes. PR and queue requirements control integration.
 The reviewer must be someone other than the latest pusher. If an agent
 pushes using your account, you are the pusher: another person must approve.
 Have a second eligible reviewer available before activating the policy.
+The headcount check is only a minimum: if one collaborator authors a PR and
+another makes its latest reviewable push, a third eligible person may be
+needed. Neither the author nor the latest pusher can supply that approval.
 
 Initial tuning: two concurrent candidate builds, batches of one to three,
 all candidates green, and a 60-minute check timeout. This leaves room above
