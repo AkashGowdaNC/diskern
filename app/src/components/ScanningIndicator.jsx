@@ -35,16 +35,6 @@ export default function ScanningIndicator({ filesSeen, bytesSeen, phase, onCance
             {filesSeen.toLocaleString()} files found
             {bytesSeen > 0 && <> · {humanBytes(bytesSeen)} so far</>}
           </p>
-          {/* Polite announcements for the milestones only. This text
-              changes a handful of times per scan — once per phase, and
-              once more when a cancel registers — so a live region
-              carrying just it announces each transition while the
-              150ms file/byte ticks above stay silent. */}
-          <p className="sr-only" aria-live="polite" aria-atomic="true">
-            {cancelling
-              ? "Stopping the scan… nothing has been changed"
-              : phase || "Walking files"}
-          </p>
         </div>
       </div>
       <div className="progress-track">
