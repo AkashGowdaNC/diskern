@@ -73,10 +73,17 @@
     },
     {
       "id": "yarn-cache",
-      "patterns": ["**/.cache/yarn/**", "**/library/caches/yarn/**", "**/appdata/local/yarn/cache/**", "**/.yarn/cache/**", "**/.yarn/berry/cache/**"],
+      "patterns": ["**/.cache/yarn/**", "**/library/caches/yarn/**", "**/appdata/local/yarn/cache/**"],
       "category": "package_manager_cache",
       "verdict": "safe",
-      "description": "Yarn's download cache — the Yarn 1 global cache and Yarn Berry's per-project and global caches. Re-fetched on demand; removing it only makes the next install download packages again."
+      "description": "Yarn 1's global download cache. Re-fetched on demand; removing it only makes the next install download packages again."
+    },
+    {
+      "id": "yarn-pnp-cache",
+      "patterns": ["**/.yarn/cache/**", "**/.yarn/berry/cache/**"],
+      "category": "package_manager_cache",
+      "verdict": "review",
+      "description": "Yarn Berry's package cache — a project's .yarn/cache or the global .yarn/berry/cache. With Plug'n'Play these archives back live imports, so quarantining them breaks the app until yarn install restores them; only a pure download cache under the node-modules linker."
     },
     {
       "id": "unix-system-logs",

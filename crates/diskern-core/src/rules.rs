@@ -505,6 +505,25 @@ mod tests {
             "/home/u/.cache/yarn/v6/npm-react-18.2.0.zip",
             "/Users/u/Library/Caches/Yarn/v6/npm-react-18.2.0.zip",
             "C:\\Users\\u\\AppData\\Local\\Yarn\\Cache\\v6\\npm-react-18.2.0.zip",
+        ] {
+            let (cat, verdict, rule) = db.classify(std::path::Path::new(path));
+            assert_eq!(
+                cat,
+                Category::PackageManagerCache,
+                "{path} matched {rule:?}"
+            );
+            assert_eq!(verdict, Verdict::Safe, "{path} matched {rule:?}");
+        }
+    }
+
+    /// Yarn Berry's PnP loader reads packages straight out of the cache
+    /// archives — a project's `.yarn/cache` or the global `.yarn/berry/cache`
+    /// — so these paths are `review`, not `safe`: quarantining them breaks
+    /// imports until `yarn install` restores the cache.
+    #[test]
+    fn yarn_pnp_caches_are_review_not_safe() {
+        let db = RulesDb::embedded();
+        for path in [
             "/home/u/proj/.yarn/cache/react-npm-18.2.0.zip",
             "/home/u/.yarn/berry/cache/react-npm-18.2.0.zip",
         ] {
@@ -514,7 +533,7 @@ mod tests {
                 Category::PackageManagerCache,
                 "{path} matched {rule:?}"
             );
-            assert_eq!(verdict, Verdict::Safe, "{path} matched {rule:?}");
+            assert_eq!(verdict, Verdict::Review, "{path} matched {rule:?}");
         }
     }
 
@@ -622,6 +641,12 @@ mod tests {
             "yarn-cache",
             Category::PackageManagerCache,
             Verdict::Safe,
+        ),
+        (
+            "/home/u/proj/.yarn/cache/react-npm-18.2.0.zip",
+            "yarn-pnp-cache",
+            Category::PackageManagerCache,
+            Verdict::Review,
         ),
         (
             "/var/log/apt/history.log",
