@@ -516,8 +516,8 @@ mod tests {
         }
     }
 
-    /// Yarn Berry's PnP loader reads packages straight out of the cache
-    /// archives — a project's `.yarn/cache` or the global `.yarn/berry/cache`
+    /// Yarn Berry's Plug'n'Play loader reads packages straight out of the
+    /// cache archives — a project's `.yarn/cache` or the global `.yarn/berry/cache`
     /// — so these paths are `review`, not `safe`: quarantining them breaks
     /// imports until `yarn install` restores the cache.
     #[test]
