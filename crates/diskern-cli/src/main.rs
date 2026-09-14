@@ -32,6 +32,9 @@ enum Command {
         /// Emit full JSON report instead of a summary
         #[arg(long)]
         json: bool,
+        /// Write the JSON report to a file instead of stdout; requires --json
+        #[arg(long, value_name = "FILE", requires = "json")]
+        output: Option<PathBuf>,
         /// Print a deterministic plain-language explanation of the report
         #[arg(long)]
         explain: bool,
@@ -251,6 +254,7 @@ fn main() -> Result<()> {
             roots,
             exclude,
             json,
+            output,
             explain,
             top,
             verdict,
@@ -267,7 +271,23 @@ fn main() -> Result<()> {
                 if let Some(path) = external_rules {
                     eprintln!("Using external rules database: {}", path.display());
                 }
-                println!("{}", serde_json::to_string_pretty(&report)?);
+                let rendered = serde_json::to_string_pretty(&report)?;
+                match output {
+                    // Issue #166. A file beats a stdout dump for large
+                    // scans: nothing to page through, and the report
+                    // survives the terminal. stdout stays clean so the
+                    // command composes in scripts either way.
+                    Some(path) => {
+                        std::fs::write(&path, format!("{rendered}\n")).with_context(|| {
+                            format!(
+                                "could not write JSON report to '{}'; check that the directory exists and is writable",
+                                path.display()
+                            )
+                        })?;
+                        eprintln!("Wrote JSON report to {}", path.display());
+                    }
+                    None => println!("{rendered}"),
+                }
             } else {
                 println!(
                     "Scanned {} file{}.",
