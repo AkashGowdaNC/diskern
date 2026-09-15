@@ -463,6 +463,97 @@ mod tests {
         }
     }
 
+    #[test]
+    fn pnpm_store_is_safe_to_remove() {
+        let db = RulesDb::embedded();
+        for path in [
+            "/home/u/.local/share/pnpm/store/v3/files/aa/bb",
+            "/Users/u/Library/pnpm/store/v3/files/aa/bb",
+            "C:\\Users\\u\\AppData\\Local\\pnpm\\store\\v3\\files\\aa\\bb",
+            "/home/u/.pnpm-store/v3/files/aa/bb",
+        ] {
+            let (cat, verdict, rule) = db.classify(std::path::Path::new(path));
+            assert_eq!(
+                cat,
+                Category::PackageManagerCache,
+                "{path} matched {rule:?}"
+            );
+            assert_eq!(verdict, Verdict::Safe, "{path} matched {rule:?}");
+        }
+    }
+
+    /// The pnpm home directory holds the store, but also the pnpm binary
+    /// itself and globally installed packages — neither is a download
+    /// cache.
+    #[test]
+    fn pnpm_home_outside_the_store_is_not_marked_safe() {
+        let db = RulesDb::embedded();
+        for path in [
+            "/Users/u/Library/pnpm/pnpm",
+            "/home/u/.local/share/pnpm/global/5/.npmrc",
+        ] {
+            let (cat, verdict, rule) = db.classify(std::path::Path::new(path));
+            assert_eq!(cat, Category::Unknown, "{path} matched {rule:?}");
+            assert_ne!(verdict, Verdict::Safe, "{path} matched {rule:?}");
+        }
+    }
+
+    #[test]
+    fn yarn_cache_is_safe_to_remove() {
+        let db = RulesDb::embedded();
+        for path in [
+            "/home/u/.cache/yarn/v6/npm-react-18.2.0.zip",
+            "/Users/u/Library/Caches/Yarn/v6/npm-react-18.2.0.zip",
+            "C:\\Users\\u\\AppData\\Local\\Yarn\\Cache\\v6\\npm-react-18.2.0.zip",
+        ] {
+            let (cat, verdict, rule) = db.classify(std::path::Path::new(path));
+            assert_eq!(
+                cat,
+                Category::PackageManagerCache,
+                "{path} matched {rule:?}"
+            );
+            assert_eq!(verdict, Verdict::Safe, "{path} matched {rule:?}");
+        }
+    }
+
+    /// Yarn Berry's Plug'n'Play loader reads packages straight out of the
+    /// cache archives — a project's `.yarn/cache` or the global `.yarn/berry/cache`
+    /// — so these paths are `review`, not `safe`: quarantining them breaks
+    /// imports until `yarn install` restores the cache.
+    #[test]
+    fn yarn_pnp_caches_are_review_not_safe() {
+        let db = RulesDb::embedded();
+        for path in [
+            "/home/u/proj/.yarn/cache/react-npm-18.2.0.zip",
+            "/home/u/.yarn/berry/cache/react-npm-18.2.0.zip",
+        ] {
+            let (cat, verdict, rule) = db.classify(std::path::Path::new(path));
+            assert_eq!(
+                cat,
+                Category::PackageManagerCache,
+                "{path} matched {rule:?}"
+            );
+            assert_eq!(verdict, Verdict::Review, "{path} matched {rule:?}");
+        }
+    }
+
+    /// A project's `.yarn` directory keeps the Yarn release binary,
+    /// plugins and editor SDKs next to `cache` — only `cache` is
+    /// re-downloaded packages.
+    #[test]
+    fn yarn_support_files_outside_the_cache_are_not_marked_safe() {
+        let db = RulesDb::embedded();
+        for path in [
+            "/home/u/proj/.yarn/releases/yarn-4.5.0.cjs",
+            "/home/u/proj/.yarn/sdks/typescript/bin/tsc",
+            "/home/u/proj/.yarnrc.yml",
+        ] {
+            let (cat, verdict, rule) = db.classify(std::path::Path::new(path));
+            assert_eq!(cat, Category::Unknown, "{path} matched {rule:?}");
+            assert_ne!(verdict, Verdict::Safe, "{path} matched {rule:?}");
+        }
+    }
+
     /// An installed application's own repair binary is not a reclaimable
     /// download. `unknown` is the right answer: report::build drops those,
     /// so it never reaches the user as an actionable row.
@@ -538,6 +629,24 @@ mod tests {
             "npm-cache",
             Category::PackageManagerCache,
             Verdict::Safe,
+        ),
+        (
+            "/home/u/.local/share/pnpm/store/v3/files/aa/bb",
+            "pnpm-store",
+            Category::PackageManagerCache,
+            Verdict::Safe,
+        ),
+        (
+            "/Users/u/Library/Caches/Yarn/v6/npm-react-18.2.0.zip",
+            "yarn-cache",
+            Category::PackageManagerCache,
+            Verdict::Safe,
+        ),
+        (
+            "/home/u/proj/.yarn/cache/react-npm-18.2.0.zip",
+            "yarn-pnp-cache",
+            Category::PackageManagerCache,
+            Verdict::Review,
         ),
         (
             "/var/log/apt/history.log",
