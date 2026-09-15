@@ -584,6 +584,21 @@ export default function App() {
         <p className="tagline">Understand your disk before you clean it.</p>
       </header>
 
+      {/* One persistent live region for scan milestones. It mounts empty
+          and sits outside the report branches: ScanningIndicator only
+          appears once a scan starts (already populated — polite regions
+          announce changes, not initial content) and is replaced when the
+          first preview swaps the view, so a region inside it could miss
+          the first phase entirely. Only the phase is announced — the
+          ~150ms file/byte counters stay out of it. */}
+      <p className="sr-only" aria-live="polite" aria-atomic="true">
+        {scanning
+          ? cancelling
+            ? "Stopping the scan… nothing has been changed"
+            : liveProgress.phase || "Walking files"
+          : ""}
+      </p>
+
       {!displayedReport && (
         <section className="empty">
           <p>Run a read-only scan. Nothing is deleted — ever — without your review.</p>
