@@ -105,6 +105,22 @@ button { padding: 0.6rem 1.4rem; font-size: 1rem; cursor: pointer; }
   border-radius: 6px;
 }
 .path { grid-column: 1; font-family: ui-monospace, monospace; font-size: 0.85rem; overflow-wrap: anywhere; }
+/* Category badge: small, visually quiet classification badge on finding rows */
+.category-badge {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.15rem 0.45rem;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 0.72rem;
+  font-weight: 500;
+  line-height: 1.2;
+  border-radius: 4px;
+  background: rgba(128, 128, 128, 0.14);
+  border: 1px solid rgba(128, 128, 128, 0.25);
+  opacity: 0.85;
+  white-space: nowrap;
+  vertical-align: middle;
+}
 .size { grid-column: 2; font-size: 0.82rem; opacity: 0.8; white-space: nowrap; font-variant-numeric: tabular-nums; }
 /* min-width pins the auto column to the widest state (the confirm
    cluster), so idle → confirm → working swaps don't resize the row and
