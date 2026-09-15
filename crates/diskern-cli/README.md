@@ -20,6 +20,9 @@ diskern scan ~ --exclude ~/Videos --exclude ~/VMs
 # Full JSON report (for scripting / piping into jq)
 diskern scan ~/Downloads --json
 
+# Write the JSON report to a file instead of stdout
+diskern scan ~/Downloads --json --output report.json
+
 # Add deterministic narration over the finished report
 diskern scan ~/Downloads --explain
 ```
@@ -61,6 +64,7 @@ nothing will offer to move it.
 | `--verdict` | all     | `safe`, `review`, `risky` or `protected`. Duplicate sets have no verdict, so they are omitted when this is set. |
 | `--explain` | off | Print deterministic narration over the finished report. |
 | `--json`    | off     | Full report as JSON; the flags above don't apply.        |
+| `--output <file>` | stdout | Write the JSON report to a file instead of printing it; requires `--json`. |
 | `--rules <file>` | embedded | Load and validate an external rules database; embedded protected rules remain authoritative. |
 
 Scanning is always read-only — the CLI never modifies, moves, or deletes

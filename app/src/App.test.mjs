@@ -83,3 +83,45 @@ test("finding rows display a category badge", () => {
   );
 });
 
+const liveRegion = /<p\s+className="sr-only"\s+aria-live="polite"[^>]*>([\s\S]*?)<\/p>/.exec(
+  jsx
+);
+
+test("one live region is mounted persistently, before the report branches", () => {
+  assert.ok(liveRegion, "a visually-hidden polite live region must exist");
+  const regionIndex = jsx.indexOf('aria-live="polite"');
+  assert.ok(
+    regionIndex > jsx.indexOf("<main") &&
+      regionIndex < jsx.indexOf("{!displayedReport && ("),
+    "the region mounts outside the conditional report branches — a region " +
+      "inside ScanningIndicator mounts already populated and is swapped out " +
+      "by the first preview, so the first phase would never be announced"
+  );
+});
+
+test("phase transitions announce politely, without the count ticks", () => {
+  assert.match(liveRegion[1], /liveProgress\.phase\b/, "the region announces the scan phase");
+  assert.doesNotMatch(
+    liveRegion[1],
+    /files_seen|bytes_seen|filesSeen|bytesSeen/,
+    "the ~150ms file/byte ticks must stay out of the announced text"
+  );
+  assert.match(
+    liveRegion[0],
+    /aria-atomic="true"/,
+    "announce the whole phrase, not a diff of it"
+  );
+});
+
+test("the region is empty while idle and announces cancelling", () => {
+  assert.match(
+    liveRegion[1],
+    /scanning\s*\?[\s\S]*:\s*""/,
+    "nothing to announce when no scan is running"
+  );
+  assert.match(
+    liveRegion[1],
+    /cancelling\s*\?\s*"Stopping the scan/,
+    "pressing Cancel should announce that the scan is stopping"
+  );
+});

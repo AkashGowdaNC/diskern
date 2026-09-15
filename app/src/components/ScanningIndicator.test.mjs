@@ -33,6 +33,14 @@ test("the live counters still render from the same props", () => {
   );
 });
 
+test("the panel owns no live region — that lives in App", () => {
+  // Polite regions announce content changes, not initial content, and this
+  // component mounts already populated (and is swapped out when the first
+  // preview arrives). The persistent, initially-empty region therefore
+  // lives in App.jsx, outside the report branches — see App.test.mjs.
+  assert.doesNotMatch(scan, /aria-live/, "the live region moved to App.jsx");
+});
+
 test("cancelling gets its own calm state", () => {
   assert.match(
     scan,

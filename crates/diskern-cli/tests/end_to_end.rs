@@ -328,6 +328,121 @@ fn scan_json_emits_a_parseable_report_with_the_promised_fields() {
     );
 }
 
+/// Issue #166. `--output` redirects the JSON report to a file instead of
+/// flooding stdout — the file must carry exactly the document `--json`
+/// alone would print, byte for byte once parsed.
+#[test]
+fn scan_json_output_writes_the_stdout_report_to_a_file() {
+    let root = tempdir().unwrap();
+    write_verdict_fixture(root.path());
+    let out_dir = tempdir().unwrap();
+    let report_path = out_dir.path().join("report.json");
+
+    // A plain --json run over the same fixture is the reference document.
+    let stdout_run = scan(root.path(), &["--json"]);
+    assert_eq!(
+        stdout_run.status.code(),
+        Some(0),
+        "stderr: {}",
+        String::from_utf8_lossy(&stdout_run.stderr)
+    );
+
+    let output = scan(
+        root.path(),
+        &["--json", "--output", report_path.to_str().unwrap()],
+    );
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    // The point of the flag is avoiding the huge dump: stdout stays
+    // empty, and the confirmation goes to stderr where it cannot
+    // corrupt a pipe.
+    assert!(
+        output.stdout.is_empty(),
+        "--output should keep the report off stdout: {}",
+        String::from_utf8_lossy(&output.stdout)
+    );
+    assert!(
+        String::from_utf8_lossy(&output.stderr).contains("report.json"),
+        "no confirmation on stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let written = fs::read(&report_path).expect("report file should exist");
+    let from_file: serde_json::Value =
+        serde_json::from_slice(&written).expect("report file should be a single JSON document");
+    let from_stdout: serde_json::Value =
+        serde_json::from_slice(&stdout_run.stdout).expect("stdout report should parse");
+    assert_eq!(
+        from_file, from_stdout,
+        "file report differs from what --json prints to stdout"
+    );
+    assert_eq!(from_file["files_scanned"].as_u64(), Some(6));
+}
+
+#[test]
+fn scan_output_without_json_is_rejected() {
+    // The flag only makes sense in the JSON path, so clap turns the
+    // invocation down before a scan ever runs: exit 2, no report file,
+    // nothing on stdout.
+    let root = tempdir().unwrap();
+    let report_path = root.path().join("report.json");
+
+    let output = scan(root.path(), &["--output", report_path.to_str().unwrap()]);
+    assert_eq!(
+        output.status.code(),
+        Some(2),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        output.stdout.is_empty(),
+        "rejected invocation wrote to stdout: {}",
+        String::from_utf8_lossy(&output.stdout)
+    );
+    assert!(
+        !report_path.exists(),
+        "rejected invocation still wrote a report file"
+    );
+    assert!(
+        String::from_utf8_lossy(&output.stderr).contains("--json"),
+        "error does not name the missing --json: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+#[test]
+fn scan_output_to_an_unwritable_path_exits_1_with_a_friendly_error() {
+    // A path inside a directory that does not exist fails portably —
+    // permission-based fixtures do not, running as root or on Windows.
+    let root = tempdir().unwrap();
+    let report_path = root.path().join("missing/report.json");
+
+    let output = scan(
+        root.path(),
+        &["--json", "--output", report_path.to_str().unwrap()],
+    );
+    assert_eq!(
+        output.status.code(),
+        Some(1),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("could not write JSON report") && stderr.contains("missing"),
+        "error should name the path and the failure:\n{stderr}"
+    );
+    assert!(
+        !report_path.exists(),
+        "a partial report file should not be left behind"
+    );
+}
+
 #[test]
 fn argument_errors_exit_2_and_write_no_report() {
     // clap owns these failures: the run never reaches the engine, so the
