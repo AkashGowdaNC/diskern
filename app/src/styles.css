@@ -39,6 +39,43 @@ button { padding: 0.6rem 1.4rem; font-size: 1rem; cursor: pointer; }
 .summary { line-height: 1.5; }
 .scanned-folder { font-family: ui-monospace, monospace; font-size: 0.85rem; opacity: 0.7; }
 
+/* Top categories compact summary */
+.top-categories-summary {
+  margin: 1rem 0 0.5rem;
+  padding: 0.75rem 1rem;
+  background: rgba(128, 128, 128, 0.06);
+  border: 1px solid rgba(128, 128, 128, 0.2);
+  border-radius: 8px;
+}
+.top-categories-title {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  opacity: 0.85;
+}
+.top-categories-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+.top-category-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 0.85rem;
+}
+.top-category-label {
+  opacity: 0.85;
+}
+.top-category-size {
+  font-family: ui-monospace, monospace;
+  font-size: 0.85rem;
+  font-weight: 500;
+  opacity: 0.9;
+}
+
 /* Collapsible verdict/category groups */
 .verdict-group { margin-top: 1.25rem; }
 .group-header {

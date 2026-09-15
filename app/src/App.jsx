@@ -208,6 +208,40 @@ function CategorySection({ title, items, defaultOpen, quarantineDir, onQuarantin
   );
 }
 
+/**
+ * Compact summary showing top categories ranked by reclaimable bytes.
+ * Gives users an immediate overview of where space is consumed
+ * before they dive into individual expandable sections.
+ */
+function TopCategoriesSummary({ items, cap = 5 }) {
+  if (!items || items.length === 0) return null;
+
+  const categories = byCategory(items)
+    .map(([cat, catItems]) => ({
+      key: cat,
+      label: CATEGORY_LABEL[cat] ?? cat,
+      total: catItems.reduce((s, f) => s + f.reclaimable, 0),
+    }))
+    .filter((c) => c.total > 0)
+    .slice(0, cap);
+
+  if (categories.length === 0) return null;
+
+  return (
+    <div className="top-categories-summary" aria-label="Top categories">
+      <h3 className="top-categories-title">Top categories</h3>
+      <ul className="top-categories-list">
+        {categories.map((c) => (
+          <li key={c.key} className="top-category-row">
+            <span className="top-category-label">{c.label}</span>
+            <span className="top-category-size">{humanBytes(c.total)}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function DuplicatesSection({ sets }) {
   const [isOpen, setIsOpen] = useState(true);
   if (sets.length === 0) return null;
@@ -672,6 +706,8 @@ export default function App() {
             refreshKey={quarantineVersion}
             onRestored={handleRestored}
           />
+
+          <TopCategoriesSummary items={visibleFindings} />
 
           <DuplicatesSection sets={duplicateSets} />
           <CategorySection

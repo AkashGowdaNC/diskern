@@ -125,3 +125,21 @@ test("the region is empty while idle and announces cancelling", () => {
     "pressing Cancel should announce that the scan is stopping"
   );
 });
+
+test("shows a compact top-categories summary above the detailed results", () => {
+  assert.match(jsx, /function TopCategoriesSummary/);
+  assert.match(jsx, /className="top-categories-summary"/);
+  assert.match(jsx, /<h3 className="top-categories-title">Top categories<\/h3>/);
+  assert.match(jsx, /className="top-categories-list"/);
+  assert.match(jsx, /className="top-category-row"/);
+  assert.match(jsx, /<TopCategoriesSummary items=\{visibleFindings\} \/>/);
+
+  // Verifies TopCategoriesSummary is mounted above DuplicatesSection and CategorySection
+  const summaryIdx = jsx.indexOf("<TopCategoriesSummary");
+  const duplicatesIdx = jsx.indexOf("<DuplicatesSection");
+  const categorySectionIdx = jsx.indexOf("<CategorySection");
+  assert.ok(summaryIdx > 0, "TopCategoriesSummary must be rendered in App");
+  assert.ok(summaryIdx < duplicatesIdx, "TopCategoriesSummary must render above DuplicatesSection");
+  assert.ok(summaryIdx < categorySectionIdx, "TopCategoriesSummary must render above CategorySection");
+});
+

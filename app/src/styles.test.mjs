@@ -101,3 +101,11 @@ test("category badges have quiet styling", () => {
   assert.match(css, /\.category-badge\s*\{[^}]*font-size\s*:/s);
 });
 
+test("top categories summary has compact card styling", () => {
+  assert.match(css, /\.top-categories-summary\s*\{[^}]*border-radius\s*:/s);
+  assert.match(css, /\.top-categories-title\s*\{[^}]*font-weight\s*:/s);
+  assert.match(css, /\.top-category-row\s*\{[^}]*display\s*:\s*flex\b/s);
+  assert.match(css, /\.top-category-size\s*\{[^}]*font-family\s*:\s*ui-monospace/s);
+});
+
+
