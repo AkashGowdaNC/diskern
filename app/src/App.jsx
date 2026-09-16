@@ -711,7 +711,7 @@ export default function App() {
 
           <DuplicatesSection sets={duplicateSets} />
           <CategorySection
-            title="Safe to remove"
+            title="Safe to quarantine"
             items={groups.safe}
             defaultOpen={true}
             quarantineDir={quarantineDir}
