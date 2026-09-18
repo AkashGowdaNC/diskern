@@ -1,1 +1,0 @@
-Make the first scan empty state more helpful
